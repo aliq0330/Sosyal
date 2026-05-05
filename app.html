@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f1e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Sosyal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ======================================
+       BOTTOM NAVIGATION
+  ======================================= -->
+  <nav id="bottom-nav">
+    <button class="nav-item active" data-page="map" onclick="navigate('map')">
+      <span class="nav-icon">🗺️</span>
+      <span class="nav-label">Harita</span>
+    </button>
+    <button class="nav-item" data-page="explore" onclick="navigate('explore')">
+      <span class="nav-icon">🔍</span>
+      <span class="nav-label">Keşfet</span>
+    </button>
+    <button class="nav-item nav-fab" data-page="ride" onclick="navigate('ride')">
+      <span class="nav-icon">＋</span>
+    </button>
+    <button class="nav-item" data-page="communities" onclick="navigate('communities')">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Topluluklar</span>
+    </button>
+    <button class="nav-item" data-page="profile" onclick="navigate('profile')">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profil</span>
+    </button>
+  </nav>
+
+  <!-- ======================================
+       PAGE: MAP (Ana Sayfa)
+  ======================================= -->
+  <section id="page-map" class="page active">
+    <div id="map-container">
+      <div id="leaflet-map"></div>
+    </div>
+
+    <!-- Search bar -->
+    <div class="map-search-bar">
+      <div class="input-icon" style="flex:1;position:relative">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" placeholder="Rota, etkinlik veya şehir ara..." id="map-search-input" oninput="mapSearchHandler(this.value)">
+      </div>
+      <button class="search-btn" onclick="toggleMapFilter()">
+        <span id="filter-icon">⚙️</span>
+      </button>
+      <button class="search-btn" onclick="toggleTheme()" title="Tema değiştir">
+        <span id="theme-icon">🌙</span>
+      </button>
+    </div>
+
+    <!-- Filter strip (toggleable) -->
+    <div id="map-filter-strip" style="position:absolute;top:76px;left:16px;right:16px;z-index:10;display:none">
+      <div class="filter-strip" style="background:var(--card);border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow)">
+        <div class="filter-chip active" onclick="filterMapLayer('all', this)">Tümü</div>
+        <div class="filter-chip" onclick="filterMapLayer('routes', this)">🟢 Rotalar</div>
+        <div class="filter-chip" onclick="filterMapLayer('events', this)">🔴 Etkinlikler</div>
+        <div class="filter-chip" onclick="filterMapLayer('users', this)">🔵 Kullanıcılar</div>
+        <div class="filter-chip" onclick="filterMapLayer('bicycle', this)">🚴 Bisiklet</div>
+        <div class="filter-chip" onclick="filterMapLayer('motorcycle', this)">🏍️ Motor</div>
+      </div>
+    </div>
+
+    <!-- Right-side action buttons -->
+    <div class="map-actions">
+      <button class="map-action-btn" onclick="locateUser()" title="Konumum">📍</button>
+      <button class="map-action-btn" id="map-tile-btn" onclick="cycleMapTile()" title="Harita tipi">🗺️</button>
+    </div>
+
+    <!-- Map legend -->
+    <div class="map-legend">
+      <div class="map-legend-item"><div class="map-legend-dot" style="background:#22c55e"></div>Rota</div>
+      <div class="map-legend-item"><div class="map-legend-dot" style="background:#ef4444"></div>Etkinlik</div>
+      <div class="map-legend-item"><div class="map-legend-dot" style="background:#3b82f6"></div>Kullanıcı</div>
+    </div>
+
+    <!-- Popup card -->
+    <div class="map-popup" id="map-popup">
+      <button class="map-popup-close" onclick="closeMapPopup()">✕</button>
+      <div id="map-popup-content"></div>
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: EXPLORE (Keşfet)
+  ======================================= -->
+  <section id="page-explore" class="page">
+    <!-- Fixed header -->
+    <div class="app-header">
+      <div class="header-logo">
+        <div class="logo-mark">🚴</div>
+        <span class="logo-name">Sosyal</span>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn" onclick="navigate('notifications')" title="Bildirimler">
+          🔔
+          <span class="badge" id="notif-badge" style="display:none"></span>
+        </button>
+        <button class="header-btn" onclick="navigate('messages')" title="Mesajlar">💬</button>
+      </div>
+    </div>
+
+    <div class="page-content has-both">
+      <!-- Filter strip -->
+      <div class="filter-strip" style="position:sticky;top:0;z-index:5">
+        <div class="filter-chip active" onclick="exploreFilter('all', this)">🔥 Popüler</div>
+        <div class="filter-chip" onclick="exploreFilter('routes', this)">🟢 Rotalar</div>
+        <div class="filter-chip" onclick="exploreFilter('rides', this)">🚴 Sürüşler</div>
+        <div class="filter-chip" onclick="exploreFilter('events', this)">📅 Etkinlikler</div>
+        <div class="filter-chip" onclick="exploreFilter('bicycle', this)">🚲 Bisiklet</div>
+        <div class="filter-chip" onclick="exploreFilter('motorcycle', this)">🏍️ Motor</div>
+      </div>
+
+      <!-- Content area (routes grid or feed) -->
+      <div id="explore-content">
+        <!-- Skeleton loading -->
+        <div class="explore-grid" id="explore-loading">
+          <div class="card" style="height:220px"><div class="skeleton" style="height:140px"></div><div class="card-body"><div class="skeleton skeleton-text w-3/4"></div><div class="skeleton skeleton-text w-1/2"></div></div></div>
+          <div class="card" style="height:220px"><div class="skeleton" style="height:140px"></div><div class="card-body"><div class="skeleton skeleton-text w-3/4"></div><div class="skeleton skeleton-text w-1/2"></div></div></div>
+          <div class="card" style="height:220px"><div class="skeleton" style="height:140px"></div><div class="card-body"><div class="skeleton skeleton-text w-3/4"></div><div class="skeleton skeleton-text w-1/2"></div></div></div>
+          <div class="card" style="height:220px"><div class="skeleton" style="height:140px"></div><div class="card-body"><div class="skeleton skeleton-text w-3/4"></div><div class="skeleton skeleton-text w-1/2"></div></div></div>
+        </div>
+        <div id="explore-data" style="display:none"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: RIDE (Sürüş Başlat)
+  ======================================= -->
+  <section id="page-ride" class="page">
+    <div class="app-header">
+      <div class="header-logo">
+        <div class="logo-mark">➕</div>
+        <span class="header-title">Sürüş</span>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn" onclick="navigate('share-ride')" title="Rota Paylaş">📝</button>
+      </div>
+    </div>
+
+    <!-- Idle state (before ride) -->
+    <div id="ride-idle" class="page-content has-both">
+      <div class="ride-hero">
+        <h1 class="ride-hero-title">Hazır mısın? 🚴</h1>
+        <p class="ride-hero-desc">Başlat'a bas, GPS rotanı kaydediyor</p>
+      </div>
+
+      <!-- Mini map preview -->
+      <div class="ride-map-preview" style="margin:0 16px 16px">
+        <div id="ride-preview-map"></div>
+        <div style="position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,0.6);border-radius:8px;padding:4px 10px;font-size:0.75rem;color:white;">📍 Mevcut Konum</div>
+      </div>
+
+      <!-- Stats (all zero) -->
+      <div class="ride-stats-grid">
+        <div class="ride-stat-box">
+          <div class="ride-stat-value" id="idle-speed">0.0</div>
+          <div class="ride-stat-unit">km/s</div>
+          <div class="ride-stat-label">Hız</div>
+        </div>
+        <div class="ride-stat-box">
+          <div class="ride-stat-value" id="idle-distance">0.00</div>
+          <div class="ride-stat-unit">km</div>
+          <div class="ride-stat-label">Mesafe</div>
+        </div>
+        <div class="ride-stat-box">
+          <div class="ride-stat-value" id="idle-time">00:00</div>
+          <div class="ride-stat-unit">dak</div>
+          <div class="ride-stat-label">Süre</div>
+        </div>
+      </div>
+
+      <!-- Vehicle toggle -->
+      <div style="display:flex;gap:8px;padding:0 16px;margin-bottom:12px">
+        <button class="btn btn-card btn-full active" id="veh-bicycle" onclick="selectRideVehicle('bicycle', this)">🚴 Bisiklet</button>
+        <button class="btn btn-card btn-full" id="veh-motorcycle" onclick="selectRideVehicle('motorcycle', this)">🏍️ Motor</button>
+      </div>
+
+      <!-- Start button -->
+      <div class="ride-controls">
+        <button class="ride-start-btn" onclick="startRide()">
+          <span class="btn-icon">▶️</span>
+          <span>Sürüşü Başlat</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active ride state -->
+    <div id="ride-active" style="display:none;flex-direction:column;height:100%;padding-bottom:var(--nav-height)">
+      <div class="ride-active-header">
+        <div class="ride-active-label">SÜRE</div>
+        <div class="ride-active-timer" id="active-timer">00:00:00</div>
+      </div>
+
+      <!-- Active map -->
+      <div style="flex:1;position:relative;min-height:200px">
+        <div id="ride-active-map" style="width:100%;height:100%"></div>
+        <!-- Add photo button overlay -->
+        <button style="position:absolute;bottom:12px;right:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 16px;font-size:0.875rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;box-shadow:var(--shadow)" onclick="addRidePhoto()">📷 Fotoğraf</button>
+      </div>
+
+      <!-- Live stats -->
+      <div class="ride-stats-grid" style="padding:12px 16px">
+        <div class="ride-stat-box">
+          <div class="ride-stat-value" id="active-speed">0.0</div>
+          <div class="ride-stat-unit">km/s</div>
+          <div class="ride-stat-label">Anlık</div>
+        </div>
+        <div class="ride-stat-box">
+          <div class="ride-stat-value" id="active-distance">0.00</div>
+          <div class="ride-stat-unit">km</div>
+          <div class="ride-stat-label">Mesafe</div>
+        </div>
+        <div class="ride-stat-box">
+          <div class="ride-stat-value" id="active-avg-speed">0.0</div>
+          <div class="ride-stat-unit">km/s</div>
+          <div class="ride-stat-label">Ort. Hız</div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="ride-active-controls">
+        <button class="ride-pause-btn" id="pause-btn" onclick="togglePause()">⏸ Duraklat</button>
+        <button class="ride-stop-btn" onclick="confirmStopRide()">⏹ Bitir</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: COMMUNITIES (Topluluklar)
+  ======================================= -->
+  <section id="page-communities" class="page">
+    <div class="app-header">
+      <div class="header-logo">
+        <div class="logo-mark">👥</div>
+        <span class="header-title">Topluluklar</span>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn" onclick="showCreateCommunity()">➕</button>
+        <button class="header-btn">🔍</button>
+      </div>
+    </div>
+
+    <div class="page-content has-both">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('comm', 'mine', this)">Katıldıklarım</button>
+        <button class="tab-btn" onclick="switchTab('comm', 'discover', this)">Keşfet</button>
+        <button class="tab-btn" onclick="switchTab('comm', 'nearby', this)">Yakınımda</button>
+      </div>
+
+      <div id="comm-mine" class="tab-content active">
+        <div id="communities-mine-content"></div>
+      </div>
+      <div id="comm-discover" class="tab-content">
+        <div id="communities-discover-content"></div>
+      </div>
+      <div id="comm-nearby" class="tab-content">
+        <div id="communities-nearby-content"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: PROFILE (Profil)
+  ======================================= -->
+  <section id="page-profile" class="page">
+    <div class="app-header">
+      <div class="header-logo">
+        <span class="header-title" id="profile-header-name">Profil</span>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn" onclick="toggleTheme()">🌙</button>
+        <button class="header-btn" onclick="showSettings()">⚙️</button>
+      </div>
+    </div>
+
+    <div class="page-content has-both" id="profile-content">
+      <!-- Loaded dynamically -->
+      <div class="empty-state">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: NOTIFICATIONS (Bildirimler)
+  ======================================= -->
+  <section id="page-notifications" class="page">
+    <div class="app-header">
+      <button class="header-back" onclick="goBack()">←</button>
+      <span class="header-title">Bildirimler</span>
+      <div class="header-actions">
+        <button class="header-btn" onclick="markAllRead()">✓ Tümü</button>
+      </div>
+    </div>
+    <div class="page-content has-header" id="notifications-content">
+      <div class="empty-state"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: MESSAGES (Mesajlar)
+  ======================================= -->
+  <section id="page-messages" class="page">
+    <div class="app-header">
+      <button class="header-back" onclick="goBack()">←</button>
+      <span class="header-title">Mesajlar</span>
+      <div class="header-actions">
+        <button class="header-btn" onclick="newMessage()">✏️</button>
+      </div>
+    </div>
+    <div class="page-content has-header" id="messages-list-content">
+      <div class="empty-state"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: CHAT (Konuşma Detay)
+  ======================================= -->
+  <section id="page-chat" class="page">
+    <div class="app-header">
+      <button class="header-back" onclick="goBack()">←</button>
+      <div style="display:flex;align-items:center;gap:10px;flex:1">
+        <div class="avatar avatar-sm" id="chat-header-avatar"></div>
+        <div>
+          <div class="header-title" id="chat-header-name" style="font-size:1rem">...</div>
+          <div style="font-size:0.75rem;color:var(--secondary)">Çevrimiçi</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn">📞</button>
+        <button class="header-btn">⋮</button>
+      </div>
+    </div>
+    <div id="chat-messages" class="chat-messages" style="margin-top:var(--header-height)"></div>
+    <div class="chat-input-bar">
+      <button class="header-btn" style="flex-shrink:0">📎</button>
+      <textarea class="chat-input" id="chat-input-text" placeholder="Mesaj yaz..." rows="1" onkeydown="chatKeydown(event)" oninput="autoResizeTextarea(this)"></textarea>
+      <button class="chat-send-btn" onclick="sendChatMessage()">➤</button>
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: COMMUNITY DETAIL
+  ======================================= -->
+  <section id="page-community-detail" class="page">
+    <div class="app-header" style="position:absolute;background:transparent;border:none;z-index:10">
+      <button class="header-back" onclick="goBack()" style="background:rgba(0,0,0,0.4);color:white">←</button>
+      <div style="flex:1"></div>
+      <div class="header-actions">
+        <button class="header-btn" style="background:rgba(0,0,0,0.4);color:white">⋮</button>
+      </div>
+    </div>
+    <div class="page-content" id="community-detail-content">
+      <div class="empty-state"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: EVENT DETAIL
+  ======================================= -->
+  <section id="page-event-detail" class="page">
+    <div class="app-header">
+      <button class="header-back" onclick="goBack()">←</button>
+      <span class="header-title" id="event-detail-title">Etkinlik</span>
+      <div class="header-actions">
+        <button class="header-btn">🔗</button>
+      </div>
+    </div>
+    <div class="page-content has-header" id="event-detail-content">
+      <div class="empty-state"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: ROUTE DETAIL
+  ======================================= -->
+  <section id="page-route-detail" class="page">
+    <div class="app-header" style="position:absolute;background:transparent;border:none;z-index:10">
+      <button class="header-back" onclick="goBack()" style="background:rgba(0,0,0,0.4);color:white">←</button>
+      <div style="flex:1"></div>
+      <div class="header-actions">
+        <button class="header-btn" style="background:rgba(0,0,0,0.4);color:white">🔖</button>
+        <button class="header-btn" style="background:rgba(0,0,0,0.4);color:white">🔗</button>
+      </div>
+    </div>
+    <div class="page-content" id="route-detail-content">
+      <div class="empty-state"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: SHARE RIDE
+  ======================================= -->
+  <section id="page-share-ride" class="page">
+    <div class="app-header">
+      <button class="header-back" onclick="goBack()">←</button>
+      <span class="header-title">Sürüşü Paylaş</span>
+      <div class="header-actions">
+        <button class="btn btn-primary btn-sm" onclick="submitRideShare()" id="share-submit-btn">Paylaş</button>
+      </div>
+    </div>
+    <div class="page-content has-header" id="share-ride-content">
+      <!-- Filled dynamically -->
+    </div>
+  </section>
+
+  <!-- ======================================
+       PAGE: USER PROFILE (other user)
+  ======================================= -->
+  <section id="page-user-profile" class="page">
+    <div class="app-header">
+      <button class="header-back" onclick="goBack()">←</button>
+      <span class="header-title" id="user-profile-header">Profil</span>
+      <div class="header-actions">
+        <button class="header-btn">⋮</button>
+      </div>
+    </div>
+    <div class="page-content has-header" id="user-profile-content">
+      <div class="empty-state"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+</div><!-- /#app -->
+
+<!-- ======================================
+     BOTTOM SHEET (filter, options)
+======================================= -->
+<div class="bottom-sheet" id="bottom-sheet">
+  <div class="bottom-sheet-overlay" onclick="closeBottomSheet()"></div>
+  <div class="bottom-sheet-panel">
+    <div class="bottom-sheet-handle"></div>
+    <div id="bottom-sheet-content" style="padding:0 20px 20px"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Loading -->
+<div class="loading-overlay hidden" id="loading-overlay">
+  <div class="spinner"></div>
+</div>
+
+<!-- Confirm dialog -->
+<div class="bottom-sheet" id="confirm-sheet">
+  <div class="bottom-sheet-overlay" onclick="closeConfirmSheet()"></div>
+  <div class="bottom-sheet-panel">
+    <div class="bottom-sheet-handle"></div>
+    <div style="padding:0 24px 24px;text-align:center">
+      <div style="font-size:3rem;margin-bottom:12px" id="confirm-icon">⚠️</div>
+      <h3 id="confirm-title" style="font-size:1.25rem;font-weight:800;margin-bottom:8px">Emin misin?</h3>
+      <p id="confirm-desc" style="color:var(--text2);margin-bottom:24px;font-size:0.9375rem"></p>
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-outline btn-full btn-lg" onclick="closeConfirmSheet()">Vazgeç</button>
+        <button class="btn btn-danger btn-full btn-lg" id="confirm-action-btn">Evet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/app.js"></script>
+<script src="js/pages/map.js"></script>
+<script src="js/pages/explore.js"></script>
+<script src="js/pages/ride.js"></script>
+<script src="js/pages/communities.js"></script>
+<script src="js/pages/profile.js"></script>
+<script src="js/pages/notifications.js"></script>
+<script src="js/pages/messages.js"></script>
+</body>
+</html>

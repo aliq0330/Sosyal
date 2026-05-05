@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f1e">
+  <meta name="description" content="Bisiklet ve motosiklet topluluk uygulaması">
+  <title>Sosyal — Rota & Sürüş Topluluğu</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Auth page override - no bottom nav height offset */
+    body { overflow: hidden; }
+    #auth-app { overflow-y: auto; }
+  </style>
+</head>
+<body>
+<div id="auth-app">
+
+  <!-- ==================== SPLASH ==================== -->
+  <div id="screen-splash" class="auth-screen active">
+    <div class="auth-splash">
+      <div class="auth-splash-bg"></div>
+      <div class="auth-splash-illustration">🚴</div>
+      <div class="auth-splash-content">
+        <div class="auth-brand">
+          <div class="auth-logo">🚴</div>
+          <div class="auth-brand-name">Sosyal</div>
+        </div>
+        <p class="auth-tagline">
+          <strong>Bisiklet & Motosiklet</strong> tutkunlarının<br>dijital yol arkadaşı
+        </p>
+        <button class="btn btn-primary btn-full btn-xl" onclick="showAuthScreen('login')" style="margin-bottom:12px">
+          Başlayalım
+        </button>
+        <button class="btn btn-outline btn-full btn-lg" onclick="showAuthScreen('register')">
+          Hesap Oluştur
+        </button>
+        <p style="margin-top:24px;color:rgba(255,255,255,0.3);font-size:0.75rem">
+          Giriş yaparak <a href="#" style="color:rgba(255,255,255,0.5)">Kullanım Koşulları</a>'nı kabul etmiş olursunuz
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== LOGIN ==================== -->
+  <div id="screen-login" class="auth-form-screen">
+    <div class="auth-form-header">
+      <button class="btn btn-ghost btn-icon" onclick="showAuthScreen('splash')" style="margin-bottom:16px">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <h1 class="auth-form-title">Hoş Geldin 👋</h1>
+      <p class="auth-form-subtitle">Hesabına giriş yap, yola devam et</p>
+    </div>
+    <div class="auth-form-body">
+      <div id="login-error" class="hidden" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px 14px;color:#ef4444;font-size:0.875rem;"></div>
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">E-posta</label>
+          <div class="input-icon">
+            <span class="icon">✉️</span>
+            <input type="email" class="input" id="login-email" placeholder="ornek@mail.com" required autocomplete="email">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:24px">
+          <label class="form-label">Şifre</label>
+          <div class="input-icon">
+            <span class="icon">🔒</span>
+            <input type="password" class="input" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <button type="button" class="section-action" style="align-self:flex-end;font-size:0.875rem;margin-top:4px">Şifremi Unuttum</button>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="login-btn">
+          <span>Giriş Yap</span>
+        </button>
+      </form>
+
+      <div class="divider-label" style="margin:8px 0">veya</div>
+
+      <button class="btn btn-card btn-full btn-lg" onclick="handleDemoLogin()">
+        🎭 Demo ile Dene
+      </button>
+    </div>
+    <div class="auth-form-footer">
+      <p class="auth-switch">Hesabın yok mu? <a href="#" onclick="showAuthScreen('register');return false">Kayıt Ol</a></p>
+    </div>
+  </div>
+
+  <!-- ==================== REGISTER ==================== -->
+  <div id="screen-register" class="auth-form-screen">
+    <div class="auth-form-header">
+      <button class="btn btn-ghost btn-icon" onclick="showAuthScreen('splash')" style="margin-bottom:16px">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <h1 class="auth-form-title">Hesap Oluştur 🚀</h1>
+      <p class="auth-form-subtitle">Topluluğa katıl, rotaları keşfet</p>
+    </div>
+    <div class="auth-form-body">
+      <div id="register-error" class="hidden" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px 14px;color:#ef4444;font-size:0.875rem;"></div>
+      <form id="register-form" onsubmit="handleRegister(event)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="form-group">
+            <label class="form-label">Ad Soyad</label>
+            <input type="text" class="input" id="reg-fullname" placeholder="Ali Yılmaz" required autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kullanıcı Adı</label>
+            <input type="text" class="input" id="reg-username" placeholder="aliyilmaz" required autocomplete="username">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">E-posta</label>
+          <div class="input-icon">
+            <span class="icon">✉️</span>
+            <input type="email" class="input" id="reg-email" placeholder="ornek@mail.com" required autocomplete="email">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:24px">
+          <label class="form-label">Şifre</label>
+          <div class="input-icon">
+            <span class="icon">🔒</span>
+            <input type="password" class="input" id="reg-password" placeholder="En az 8 karakter" required minlength="8" autocomplete="new-password">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="register-btn">
+          Hesap Oluştur
+        </button>
+      </form>
+    </div>
+    <div class="auth-form-footer">
+      <p class="auth-switch">Zaten hesabın var mı? <a href="#" onclick="showAuthScreen('login');return false">Giriş Yap</a></p>
+    </div>
+  </div>
+
+  <!-- ==================== ONBOARDING ==================== -->
+  <div id="screen-onboarding" class="auth-form-screen">
+    <div class="auth-form-header">
+      <h1 class="auth-form-title">Profili Tamamla</h1>
+      <p class="auth-form-subtitle">Sana özel rotalar için birkaç soru</p>
+      <div class="step-indicator" style="padding:16px 0 0;justify-content:flex-start">
+        <div class="step-dot active" id="dot-0"></div>
+        <div class="step-dot" id="dot-1"></div>
+        <div class="step-dot" id="dot-2"></div>
+      </div>
+    </div>
+    <div class="auth-form-body" style="overflow-y:auto">
+
+      <!-- Step 0: Vehicle type -->
+      <div class="onboarding-step active" id="ob-step-0">
+        <h2 class="h3" style="margin-bottom:4px">Ne sürersin? 🤔</h2>
+        <p class="text-muted" style="margin-bottom:16px">İlgi alanına göre rotaları filtreleyeceğiz</p>
+        <div class="vehicle-options">
+          <div class="vehicle-option" onclick="selectVehicle('bicycle', this)">
+            <div class="v-icon">🚴</div>
+            <div class="v-info">
+              <div class="v-name">Bisiklet</div>
+              <div class="v-desc">MTB, yol, gravel, şehir bisikleti</div>
+            </div>
+            <div class="v-check">✓</div>
+          </div>
+          <div class="vehicle-option" onclick="selectVehicle('motorcycle', this)">
+            <div class="v-icon">🏍️</div>
+            <div class="v-info">
+              <div class="v-name">Motosiklet</div>
+              <div class="v-desc">Enduro, touring, naked, sport</div>
+            </div>
+            <div class="v-check">✓</div>
+          </div>
+          <div class="vehicle-option" onclick="selectVehicle('both', this)">
+            <div class="v-icon">⚡</div>
+            <div class="v-info">
+              <div class="v-name">Her ikisi de</div>
+              <div class="v-desc">Tüm rotalar ve topluluklar</div>
+            </div>
+            <div class="v-check">✓</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1: City -->
+      <div class="onboarding-step" id="ob-step-1">
+        <h2 class="h3" style="margin-bottom:4px">Hangi şehirdesin? 📍</h2>
+        <p class="text-muted" style="margin-bottom:16px">Yakınındaki rotaları ve etkinlikleri göstereceğiz</p>
+        <div class="input-icon" style="margin-bottom:16px">
+          <span class="icon">🔍</span>
+          <input type="text" class="input" id="city-input" placeholder="Şehir ara..." oninput="filterCities(this.value)">
+        </div>
+        <div class="city-suggestions" id="city-grid">
+          <div class="city-chip" onclick="selectCity('İstanbul', this)">🌉 İstanbul</div>
+          <div class="city-chip" onclick="selectCity('Ankara', this)">🏛️ Ankara</div>
+          <div class="city-chip" onclick="selectCity('İzmir', this)">🌊 İzmir</div>
+          <div class="city-chip" onclick="selectCity('Bursa', this)">🏔️ Bursa</div>
+          <div class="city-chip" onclick="selectCity('Antalya', this)">🌴 Antalya</div>
+          <div class="city-chip" onclick="selectCity('Muğla', this)">⛵ Muğla</div>
+          <div class="city-chip" onclick="selectCity('Trabzon', this)">🌿 Trabzon</div>
+          <div class="city-chip" onclick="selectCity('Erzurum', this)">🏔️ Erzurum</div>
+          <div class="city-chip" onclick="selectCity('Balıkesir', this)">🌾 Balıkesir</div>
+          <div class="city-chip" onclick="selectCity('Eskişehir', this)">🎓 Eskişehir</div>
+          <div class="city-chip" onclick="selectCity('Konya', this)">🌻 Konya</div>
+          <div class="city-chip" onclick="selectCity('Diğer', this)">📍 Diğer</div>
+        </div>
+      </div>
+
+      <!-- Step 2: Interests -->
+      <div class="onboarding-step" id="ob-step-2">
+        <h2 class="h3" style="margin-bottom:4px">Ne tür sürüşler seversin? 🎯</h2>
+        <p class="text-muted" style="margin-bottom:16px">Birden fazla seçebilirsin</p>
+        <div class="tag-selector" id="interest-selector">
+          <div class="tag-chip" onclick="toggleInterest('mountain', this)">🏔️ Dağ</div>
+          <div class="tag-chip" onclick="toggleInterest('road', this)">🛣️ Yol</div>
+          <div class="tag-chip" onclick="toggleInterest('offroad', this)">🌲 Off-road</div>
+          <div class="tag-chip" onclick="toggleInterest('gravel', this)">🪨 Gravel</div>
+          <div class="tag-chip" onclick="toggleInterest('city', this)">🏙️ Şehir</div>
+          <div class="tag-chip" onclick="toggleInterest('touring', this)">🗺️ Tur</div>
+          <div class="tag-chip" onclick="toggleInterest('enduro', this)">💥 Enduro</div>
+          <div class="tag-chip" onclick="toggleInterest('sport', this)">⚡ Spor</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:16px 24px;display:flex;gap:12px;border-top:1px solid var(--border)">
+      <button class="btn btn-outline btn-lg" id="ob-back-btn" onclick="obBack()" style="display:none">Geri</button>
+      <button class="btn btn-primary btn-full btn-lg" id="ob-next-btn" onclick="obNext()">Devam Et</button>
+    </div>
+  </div>
+
+</div><!-- /#auth-app -->
+
+<!-- ============ Toast Container ============ -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ============ Loading Overlay ============ -->
+<div class="loading-overlay hidden" id="loading-overlay">
+  <div class="spinner"></div>
+</div>
+
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  // ---- Screen navigation ----
+  function showAuthScreen(id) {
+    document.querySelectorAll('.auth-screen, .auth-form-screen').forEach(el => el.classList.remove('active'));
+    const el = document.getElementById('screen-' + id);
+    if (el) el.classList.add('active');
+  }
+
+  // ---- Onboarding state ----
+  let obStep = 0;
+  let obData = { vehicle_type: null, city: null, interests: [] };
+
+  function updateStepIndicator() {
+    [0,1,2].forEach(i => {
+      document.getElementById('dot-' + i).classList.toggle('active', i === obStep);
+    });
+    document.getElementById('ob-back-btn').style.display = obStep > 0 ? '' : 'none';
+    document.getElementById('ob-next-btn').textContent = obStep === 2 ? 'Tamamla 🎉' : 'Devam Et';
+  }
+
+  function obNext() {
+    if (obStep === 0 && !obData.vehicle_type) { showToast('Bir araç türü seç', 'error'); return; }
+    if (obStep === 1 && !obData.city)         { showToast('Şehrini seç', 'error'); return; }
+    if (obStep === 2) { finishOnboarding(); return; }
+    document.getElementById('ob-step-' + obStep).classList.remove('active');
+    obStep++;
+    document.getElementById('ob-step-' + obStep).classList.add('active');
+    updateStepIndicator();
+  }
+
+  function obBack() {
+    document.getElementById('ob-step-' + obStep).classList.remove('active');
+    obStep--;
+    document.getElementById('ob-step-' + obStep).classList.add('active');
+    updateStepIndicator();
+  }
+
+  function selectVehicle(type, el) {
+    document.querySelectorAll('.vehicle-option').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    obData.vehicle_type = type;
+  }
+
+  function selectCity(city, el) {
+    document.querySelectorAll('.city-chip').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    obData.city = city;
+    document.getElementById('city-input').value = city;
+  }
+
+  function filterCities(q) {
+    document.querySelectorAll('.city-chip').forEach(el => {
+      el.style.display = el.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+    });
+  }
+
+  function toggleInterest(tag, el) {
+    el.classList.toggle('selected');
+    if (el.classList.contains('selected')) {
+      obData.interests.push(tag);
+    } else {
+      obData.interests = obData.interests.filter(t => t !== tag);
+    }
+  }
+
+  async function finishOnboarding() {
+    showLoading(true);
+    try {
+      await saveOnboardingData(obData);
+      window.location.href = 'app.html';
+    } catch(e) {
+      showLoading(false);
+      showToast('Bir hata oluştu, tekrar dene', 'error');
+    }
+  }
+
+  // ---- Demo login ----
+  async function handleDemoLogin() {
+    localStorage.setItem('sosyal_demo_mode', '1');
+    localStorage.setItem('sosyal_demo_user', JSON.stringify({
+      id: 'demo-user-001',
+      username: 'demo_rider',
+      full_name: 'Demo Sürücü',
+      city: 'İstanbul',
+      vehicle_type: 'both',
+      total_km: 1247.5,
+      total_rides: 48,
+      follower_count: 234,
+      following_count: 87,
+      avatar_url: null
+    }));
+    showToast('Demo moda geçildi!', 'success');
+    setTimeout(() => window.location.href = 'app.html', 600);
+  }
+
+  // ---- Check existing session ----
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (localStorage.getItem('sosyal_demo_mode')) {
+      window.location.href = 'app.html';
+      return;
+    }
+    if (window.supabaseClient) {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      if (session) window.location.href = 'app.html';
+    }
+  });
+</script>
+</body>
+</html>
