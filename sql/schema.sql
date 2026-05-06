@@ -400,17 +400,17 @@ BEGIN
   BEGIN
     INSERT INTO profiles (id, username, full_name)
     VALUES (NEW.id, v_username, v_fullname);
-  EXCEPTION WHEN unique_violation THEN
-    -- username çakışırsa eşsiz suffix ekle
-    INSERT INTO profiles (id, username, full_name)
-    VALUES (
-      NEW.id,
-      v_username || '_' || LEFT(REPLACE(NEW.id::TEXT, '-', ''), 6),
-      v_fullname
-    )
-    ON CONFLICT (id) DO NOTHING;
-  EXCEPTION WHEN OTHERS THEN
-    NULL; -- her durumda auth başarısız olmasın
+  EXCEPTION
+    WHEN unique_violation THEN
+      INSERT INTO profiles (id, username, full_name)
+      VALUES (
+        NEW.id,
+        v_username || '_' || LEFT(REPLACE(NEW.id::TEXT, '-', ''), 6),
+        v_fullname
+      )
+      ON CONFLICT (id) DO NOTHING;
+    WHEN OTHERS THEN
+      NULL;
   END;
 
   RETURN NEW;
