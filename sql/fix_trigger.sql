@@ -1,7 +1,6 @@
 -- =============================================
--- SOSYAL — Sadece trigger'ı güncelle
--- Tüm şemayı baştan çalıştırmak istemiyorsan
--- sadece bu dosyayı SQL Editor'a yapıştır.
+-- SOSYAL — Trigger Düzeltme (v4 - temiz versiyon)
+-- Supabase SQL Editor'a yapistir ve calistir
 -- =============================================
 
 CREATE OR REPLACE FUNCTION handle_new_user()
@@ -9,16 +8,18 @@ RETURNS TRIGGER AS $$
 DECLARE
   v_username TEXT;
   v_fullname TEXT;
+  v_suffix   TEXT;
 BEGIN
+  v_suffix   := substr(md5(NEW.id::text), 1, 6);
   v_username := COALESCE(
-    NULLIF(TRIM(NEW.raw_user_meta_data->>'username'), ''),
-    NULLIF(TRIM(split_part(NEW.email, '@', 1)), ''),
-    'user_' || LEFT(REPLACE(NEW.id::TEXT, '-', ''), 8)
+    NULLIF(trim(NEW.raw_user_meta_data->>'username'), ''),
+    NULLIF(trim(split_part(NEW.email, '@', 1)), ''),
+    'user_' || v_suffix
   );
   v_fullname := COALESCE(
-    NULLIF(TRIM(NEW.raw_user_meta_data->>'full_name'), ''),
-    NULLIF(TRIM(split_part(NEW.email, '@', 1)), ''),
-    'Kullanıcı'
+    NULLIF(trim(NEW.raw_user_meta_data->>'full_name'), ''),
+    NULLIF(trim(split_part(NEW.email, '@', 1)), ''),
+    'Kullanici'
   );
 
   BEGIN
@@ -27,23 +28,18 @@ BEGIN
   EXCEPTION
     WHEN unique_violation THEN
       INSERT INTO profiles (id, username, full_name)
-      VALUES (
-        NEW.id,
-        v_username || '_' || LEFT(REPLACE(NEW.id::TEXT, '-', ''), 6),
-        v_fullname
-      )
+      VALUES (NEW.id, v_username || '_' || v_suffix, v_fullname)
       ON CONFLICT (id) DO NOTHING;
-    WHEN OTHERS THEN
+    WHEN others THEN
       NULL;
   END;
 
   RETURN NEW;
-EXCEPTION WHEN OTHERS THEN
+EXCEPTION WHEN others THEN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger'ı yeniden bağla
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
