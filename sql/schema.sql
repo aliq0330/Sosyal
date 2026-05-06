@@ -379,41 +379,43 @@ CREATE POLICY "badges_select" ON user_badges FOR SELECT USING (true);
 -- =============================================
 
 -- Yeni kullanıcı kaydolunca profil oluştur
+-- EXCEPTION WHEN OTHERS: auth kaydı asla trigger yüzünden başarısız olmasın
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
   v_username TEXT;
   v_fullname TEXT;
 BEGIN
-  -- Kullanıcı adı: metadata > email prefix > id'nin ilk 8 karakteri
   v_username := COALESCE(
     NULLIF(TRIM(NEW.raw_user_meta_data->>'username'), ''),
     NULLIF(TRIM(split_part(NEW.email, '@', 1)), ''),
-    LEFT(REPLACE(NEW.id::TEXT, '-', ''), 8)
+    'user_' || LEFT(REPLACE(NEW.id::TEXT, '-', ''), 8)
   );
-
-  -- Tam ad: metadata > email prefix
   v_fullname := COALESCE(
     NULLIF(TRIM(NEW.raw_user_meta_data->>'full_name'), ''),
     NULLIF(TRIM(split_part(NEW.email, '@', 1)), ''),
     'Kullanıcı'
   );
 
-  INSERT INTO profiles (id, username, full_name, avatar_url)
-  VALUES (
-    NEW.id,
-    v_username,
-    v_fullname,
-    NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'avatar_url', '')), '')
-  )
-  ON CONFLICT (id)       DO NOTHING;  -- aynı id varsa atla
-  -- username çakışması olursa suffix ekle
-  EXCEPTION WHEN unique_violation THEN
+  BEGIN
     INSERT INTO profiles (id, username, full_name)
-    VALUES (NEW.id, v_username || '_' || LEFT(REPLACE(NEW.id::TEXT,'-',''), 4), v_fullname)
+    VALUES (NEW.id, v_username, v_fullname);
+  EXCEPTION WHEN unique_violation THEN
+    -- username çakışırsa eşsiz suffix ekle
+    INSERT INTO profiles (id, username, full_name)
+    VALUES (
+      NEW.id,
+      v_username || '_' || LEFT(REPLACE(NEW.id::TEXT, '-', ''), 6),
+      v_fullname
+    )
     ON CONFLICT (id) DO NOTHING;
+  EXCEPTION WHEN OTHERS THEN
+    NULL; -- her durumda auth başarısız olmasın
+  END;
 
   RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  RETURN NEW; -- dış blok da yakala — trigger asla kayıt işlemini engellemez
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

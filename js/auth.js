@@ -52,14 +52,20 @@ async function handleRegister(e) {
 
     const userId = data?.user?.id;
 
-    // 2) Profili manuel olarak da oluştur (trigger yedek)
-    if (userId) {
-      await supabaseClient.from('profiles').upsert({
-        id:        userId,
-        username:  username || email.split('@')[0],
-        full_name: fullName || email.split('@')[0],
-      }, { onConflict: 'id' });
+    // 2) Profili manuel oluştur — trigger yedeği.
+    //    E-posta doğrulama açıksa session null gelir; upsert'i sessizce geçiyoruz.
+    if (userId && data?.session) {
+      try {
+        await supabaseClient.from('profiles').upsert({
+          id:        userId,
+          username:  username || email.split('@')[0],
+          full_name: fullName || email.split('@')[0],
+        }, { onConflict: 'id', ignoreDuplicates: true });
+      } catch (_) { /* sessizce geç */ }
     }
+
+    // localStorage'a onboarding verisi için kaydet
+    localStorage.setItem('sosyal_pending_profile', JSON.stringify({ username, full_name: fullName }));
 
     showToast('Kayıt başarılı! Profilini tamamla.', 'success');
     setTimeout(() => showAuthScreen('onboarding'), 800);
@@ -81,11 +87,18 @@ async function saveOnboardingData(data) {
   if (!supabaseClient) return;
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return;
+
+  // Onboarding tamamlandığında profili kesinlikle oluştur/güncelle
+  const pending = JSON.parse(localStorage.getItem('sosyal_pending_profile') || '{}');
   await supabaseClient.from('profiles').upsert({
-    id: user.id,
+    id:           user.id,
+    username:     pending.username  || user.email?.split('@')[0] || 'user',
+    full_name:    pending.full_name || user.email?.split('@')[0] || 'Kullanıcı',
     vehicle_type: data.vehicle_type,
-    city: data.city
-  });
+    city:         data.city,
+  }, { onConflict: 'id' });
+
+  localStorage.removeItem('sosyal_pending_profile');
 }
 
 // Toast utility (shared across auth & app)
