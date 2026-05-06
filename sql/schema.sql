@@ -21,8 +21,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  username TEXT UNIQUE NOT NULL,
-  full_name TEXT NOT NULL,
+  username TEXT UNIQUE,          -- NOT NULL kaldırıldı: trigger null gelebilir
+  full_name TEXT,                -- NOT NULL kaldırıldı: trigger null gelebilir
   avatar_url TEXT,
   bio TEXT,
   city TEXT,
@@ -381,15 +381,38 @@ CREATE POLICY "badges_select" ON user_badges FOR SELECT USING (true);
 -- Yeni kullanıcı kaydolunca profil oluştur
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_username TEXT;
+  v_fullname TEXT;
 BEGIN
+  -- Kullanıcı adı: metadata > email prefix > id'nin ilk 8 karakteri
+  v_username := COALESCE(
+    NULLIF(TRIM(NEW.raw_user_meta_data->>'username'), ''),
+    NULLIF(TRIM(split_part(NEW.email, '@', 1)), ''),
+    LEFT(REPLACE(NEW.id::TEXT, '-', ''), 8)
+  );
+
+  -- Tam ad: metadata > email prefix
+  v_fullname := COALESCE(
+    NULLIF(TRIM(NEW.raw_user_meta_data->>'full_name'), ''),
+    NULLIF(TRIM(split_part(NEW.email, '@', 1)), ''),
+    'Kullanıcı'
+  );
+
   INSERT INTO profiles (id, username, full_name, avatar_url)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
-    NEW.raw_user_meta_data->>'avatar_url'
+    v_username,
+    v_fullname,
+    NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'avatar_url', '')), '')
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id)       DO NOTHING;  -- aynı id varsa atla
+  -- username çakışması olursa suffix ekle
+  EXCEPTION WHEN unique_violation THEN
+    INSERT INTO profiles (id, username, full_name)
+    VALUES (NEW.id, v_username || '_' || LEFT(REPLACE(NEW.id::TEXT,'-',''), 4), v_fullname)
+    ON CONFLICT (id) DO NOTHING;
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

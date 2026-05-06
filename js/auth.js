@@ -27,11 +27,14 @@ async function handleLogin(e) {
 async function handleRegister(e) {
   e.preventDefault();
   const fullName = document.getElementById('reg-fullname').value.trim();
-  const username = document.getElementById('reg-username').value.trim().toLowerCase();
-  const email = document.getElementById('reg-email').value.trim();
+  const username = document.getElementById('reg-username').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+  const email    = document.getElementById('reg-email').value.trim();
   const password = document.getElementById('reg-password').value;
-  const btn = document.getElementById('register-btn');
-  const errEl = document.getElementById('register-error');
+  const btn      = document.getElementById('register-btn');
+  const errEl    = document.getElementById('register-error');
+
+  if (!fullName) { errEl.textContent = 'Ad Soyad boş olamaz.'; errEl.classList.remove('hidden'); return; }
+  if (!username)  { errEl.textContent = 'Kullanıcı adı geçersiz.'; errEl.classList.remove('hidden'); return; }
 
   errEl.classList.add('hidden');
   btn.disabled = true;
@@ -39,17 +42,34 @@ async function handleRegister(e) {
 
   try {
     if (!supabaseClient) throw new Error('Supabase yapılandırılmamış. Demo modu kullanın.');
+
+    // 1) Auth kaydı
     const { data, error } = await supabaseClient.auth.signUp({
       email, password,
-      options: {
-        data: { full_name: fullName, username }
-      }
+      options: { data: { full_name: fullName, username } }
     });
     if (error) throw error;
+
+    const userId = data?.user?.id;
+
+    // 2) Profili manuel olarak da oluştur (trigger yedek)
+    if (userId) {
+      await supabaseClient.from('profiles').upsert({
+        id:        userId,
+        username:  username || email.split('@')[0],
+        full_name: fullName || email.split('@')[0],
+      }, { onConflict: 'id' });
+    }
+
     showToast('Kayıt başarılı! Profilini tamamla.', 'success');
     setTimeout(() => showAuthScreen('onboarding'), 800);
   } catch(err) {
-    errEl.textContent = err.message || 'Kayıt başarısız. Tekrar dene.';
+    const msgs = {
+      'User already registered': 'Bu e-posta zaten kayıtlı.',
+      'Database error saving new user': 'Profil oluşturulamadı. Lütfen SQL şemasını Supabase\'e tekrar uygula.',
+      'Password should be at least 6 characters': 'Şifre en az 6 karakter olmalı.',
+    };
+    errEl.textContent = msgs[err.message] || err.message || 'Kayıt başarısız. Tekrar dene.';
     errEl.classList.remove('hidden');
     btn.disabled = false;
     btn.innerHTML = 'Hesap Oluştur';
